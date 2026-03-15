@@ -1,0 +1,27 @@
+# Entorno virtual
+venv/
+.venv/
+
+# Variables de entorno (NUNCA subir al repo)
+.env
+
+# Tickets y outputs generados
+output/
+
+# Logs (ignorar contenido, mantener carpeta)
+logs/
+!logs/.gitkeep
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/settings.json
+.idea/
