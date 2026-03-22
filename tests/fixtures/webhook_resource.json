@@ -1,0 +1,11 @@
+{
+  "incident_id": "INC-20260315-CPU002",
+  "alert_type": "resource_saturation",
+  "device_ip": "10.10.2.1",
+  "device_hostname": "FW-CLIENTE-B-01",
+  "customer_id": "CLIENTE-B",
+  "timestamp": "2026-03-15T11:00:00Z",
+  "resource_type": "cpu",
+  "threshold_value": 95.5,
+  "description": "CPU usage above 90% threshold"
+}

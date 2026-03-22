@@ -1,0 +1,11 @@
+{
+  "incident_id": "INC-20260315-VPN001",
+  "alert_type": "vpn_down",
+  "device_ip": "10.10.1.1",
+  "device_hostname": "FW-CLIENTE-A-01",
+  "customer_id": "CLIENTE-A",
+  "timestamp": "2026-03-15T10:30:00Z",
+  "vpn_tunnel_name": "VPN-SEDE-CENTRAL-MADRID",
+  "remote_gateway": "10.20.1.1",
+  "description": "Tunnel VPN-SEDE-CENTRAL-MADRID down"
+}
