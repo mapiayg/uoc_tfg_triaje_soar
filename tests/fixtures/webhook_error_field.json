@@ -1,0 +1,4 @@
+{
+  "alert_type": "vpn_down",
+  "device_ip": "10.0.0.1"
+}

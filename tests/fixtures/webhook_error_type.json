@@ -1,0 +1,8 @@
+{
+  "incident_id": "INC-TEST-ERR-001",
+  "alert_type": "tipo_desconocido",
+  "device_ip": "10.0.0.1",
+  "device_hostname": "FW-TEST",
+  "customer_id": "TEST",
+  "timestamp": "2026-03-31T10:00:00Z"
+}
