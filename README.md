@@ -139,23 +139,49 @@ uoc_tfg_triaje_soar/
 
 ---
 
-## Flujo del sistema
+## Arquitectura del sistema
 
 ```
 WOCU (alerta)
-    |  HTTP POST /webhook
-    v
-listener.py  ->  parser.py  ->  idempotency.py
-                                   |
-                               router.py
-                               /       \
-                           vpn.py   resources.py
-                          (3 queries) (3 queries)
-                               \       /
-                                   v
-                            severity.py  ->  critical / warning / info
-                                   |
-                             output.py  ->  INC-*.json + INC-*.txt
-                                   |
-                            logs/soar.log (trazabilidad por incident_id)
+    |
+    v HTTP POST /webhook
++-----------------------+
+|  Listener (Flask)     |  <- src/listener.py
+|  + Idempotencia       |  <- src/idempotency.py
++-----------+-----------+
+            |
+            v
++-----------------------+
+|  Parser / Validator   |  <- src/parser.py
+|  (valida esquema)     |
++-----------+-----------+
+            |
+            v
++-----------------------+
+|  Router / Dispatcher  |  <- src/router.py
+|  (selecciona módulo)  |
++------+------+---------+
+       |      |
+       v      v
+   VPN Diag  Resource Diag  <- src/diagnostics/vpn.py
+                             <- src/diagnostics/resources.py
+       |      |
+       +------+
+            |
+            v
++-----------------------+
+|  Clasificador         |  <- src/severity.py
+|  de Severidad         |
++-----------+-----------+
+            |
+            v
++-----------------------+
+|  Generador de         |  <- src/output.py
+|  Tickets JSON + TXT   |
++-----------+-----------+
+            |
+            v
+    Ticket INC-*.json
+    + INC-*.txt
+    + logs/soar.log
 ```
