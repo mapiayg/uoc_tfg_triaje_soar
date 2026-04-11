@@ -55,7 +55,7 @@ python test_api_connection.py
 pytest tests/ -v
 ```
 
-Requiere la FortiOS VM en marcha. Resultado esperado: **45 passed** (14 parser + 10 severity + 7 VPN + 7 resource + 7 router). Si la VM no está disponible, los tests de integración se saltan automáticamente (24 passed, 21 skipped).
+Requiere la FortiOS VM en marcha. Resultado esperado: **48 passed** (14 parser + 10 severity + 7 VPN + 7 resource + 10 router). Si la VM no está disponible, los tests de integración se saltan automáticamente (24 passed, 24 skipped).
 
 ---
 
@@ -115,7 +115,7 @@ uoc_tfg_triaje_soar/
     test_severity.py            # 10 tests unitarios
     test_vpn_module.py          # 7 tests de integración (caso VPN)
     test_resource_module.py     # 7 tests de integración (caso saturación)
-    test_router.py              # 7 tests de integración (pipeline completo)
+    test_router.py              # 10 tests de integración (pipeline completo)
     fixtures/
       webhook_vpn.json          # Payload alerta VPN
       webhook_resource.json     # Payload alerta saturación
