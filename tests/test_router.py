@@ -94,6 +94,45 @@ def test_txt_file_created(output_dir):
 
 
 # ---------------------------------------------------------------------------
+# Tests del pipeline de saturación (caso de uso 2)
+# ---------------------------------------------------------------------------
+
+_cached_resource_ticket = None
+
+
+@pytest.fixture
+def resource_ticket(tmp_output):
+    """Ticket de saturación generado por el pipeline completo."""
+    global _cached_resource_ticket
+    if _cached_resource_ticket is None:
+        _cached_resource_ticket = route_alert({
+            'incident_id': 'INC-TEST-ROUTER-RES',
+            'alert_type': 'resource_saturation',
+            'device_ip': '192.168.75.2',
+            'device_hostname': 'FORTI-LAB',
+            'customer_id': 'LAB',
+            'timestamp': '2026-04-07T10:00:00Z',
+            'resource_type': 'cpu',
+            'threshold_value': 95,
+        })
+    return _cached_resource_ticket
+
+
+def test_resource_ticket_structure(resource_ticket):
+    required = {'incident_id', 'severity', 'alert_type', 'device',
+                 'diagnostic_summary', 'recommended_action', 'timestamp'}
+    assert required.issubset(resource_ticket.keys())
+
+
+def test_resource_severity_is_critical(resource_ticket):
+    assert resource_ticket['severity'] == 'critical'
+
+
+def test_resource_alert_type(resource_ticket):
+    assert resource_ticket['alert_type'] == 'resource_saturation'
+
+
+# ---------------------------------------------------------------------------
 # Test de error
 # ---------------------------------------------------------------------------
 
