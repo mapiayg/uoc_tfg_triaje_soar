@@ -22,6 +22,8 @@ Autor: Miguel Ángel Piay García · mapiayg@uoc.edu
 ## Instalación
 
 ```bash
+git clone https://github.com/mapiayg/uoc_tfg_triaje_soar.git
+cd uoc_tfg_triaje_soar
 python -m venv venv
 source venv/Scripts/activate   # Git Bash
 pip install -r requirements.txt
