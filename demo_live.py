@@ -47,10 +47,17 @@ def send_webhook(fixture_file, description):
     print(f"  Fixture:  {fixture_file}")
     print(f"  Tipo:     {payload.get('alert_type')}")
     print(f"  ID:       {payload.get('incident_id')}")
-    resp = requests.post(WEBHOOK_URL, json=payload, timeout=10)
-    print(f"  Status:   {resp.status_code}")
-    print(f"  Response: {json.dumps(resp.json(), ensure_ascii=False)}")
-    return resp
+    try:
+        resp = requests.post(WEBHOOK_URL, json=payload, timeout=30)
+        print(f"  Status:   {resp.status_code}")
+        print(f"  Response: {json.dumps(resp.json(), ensure_ascii=False)}")
+        return resp
+    except requests.exceptions.ReadTimeout:
+        print("  ERROR: timeout — la VM puede estar apagada o la API no responde")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("  ERROR: no se puede conectar al listener")
+        return None
 
 
 def show_ticket(incident_id):
