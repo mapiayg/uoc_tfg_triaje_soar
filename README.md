@@ -82,6 +82,31 @@ python simulate_webhook.py resource  # alerta de saturación de recursos
 python demo_live.py
 ```
 
+### Pruebas comparativas (validación)
+
+```bash
+python generate_trial_alerts.py            # genera alertas variadas en output/trials/
+```
+
+Con el listener arrancado (`python run.py`):
+
+```bash
+python measure_triage_time.py              # 10 trials por tipo de alerta
+python measure_triage_time.py --trials 5   # 5 trials por tipo
+```
+
+Genera alertas variadas automáticamente si no existen, y guarda los resultados en `output/metrics_vpn.json`, `output/metrics_resource.json` y `output/metrics_summary.json`.
+
+### Proyección de impacto operativo
+
+```bash
+python calculate_impact.py                        # usa datos de measure_triage_time.py
+python calculate_impact.py --manual-time 12       # tiempo manual en minutos
+python calculate_impact.py --alerts 5 10 20 30    # escenarios de alertas/día
+```
+
+Genera `output/impact_projection.json` con la tabla de ahorro estimado en horas/hombre.
+
 ---
 
 ## Estructura del proyecto
@@ -95,6 +120,9 @@ uoc_tfg_triaje_soar/
   test_api_connection.py        # Verificación de conectividad
   demo_live.py                  # Demostración automatizada
   demo_severity.py              # Demo del clasificador
+  generate_trial_alerts.py      # Generador de alertas variadas para trials
+  measure_triage_time.py        # Medición automatizada de trials
+  calculate_impact.py           # Proyección de impacto operativo
 
   src/
     listener.py                 # Endpoint HTTP (Flask)
