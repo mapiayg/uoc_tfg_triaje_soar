@@ -85,14 +85,13 @@ python demo_live.py
 ### Pruebas comparativas (validación)
 
 ```bash
-python generate_trial_alerts.py            # genera alertas variadas en output/trials/
+python generate_trial_alerts.py            # genera 5 alertas VPN + 5 saturación en output/trials/
 ```
 
 Con el listener arrancado (`python run.py`):
 
 ```bash
-python measure_triage_time.py              # 10 trials por tipo de alerta
-python measure_triage_time.py --trials 5   # 5 trials por tipo
+python measure_triage_time.py              # ejecuta los 5 trials por tipo de alerta
 ```
 
 Genera alertas variadas automáticamente si no existen, y guarda los resultados en `output/metrics_vpn.json`, `output/metrics_resource.json` y `output/metrics_summary.json`.

@@ -1,16 +1,15 @@
 # measure_triage_time.py
 # Medición automatizada del tiempo de triaje para pruebas comparativas.
 #
-# Ejecuta N trials por tipo de alerta (VPN y saturación), cronometra cada uno
+# Ejecuta 5 trials por tipo de alerta (VPN y saturación), cronometra cada uno
 # y genera un informe con estadísticas (mediana, media, mín, máx, desviación).
 #
-# Usa alertas variadas generadas por generate_trial_alerts.py (distintos
+# Usa las alertas variadas generadas por generate_trial_alerts.py (distintos
 # clientes, dispositivos, túneles, umbrales). Si no existen, las genera
 # automáticamente antes de ejecutar los trials.
 #
 # Uso:
-#   python measure_triage_time.py              # 10 trials por tipo (por defecto)
-#   python measure_triage_time.py --trials 5   # 5 trials por tipo
+#   python measure_triage_time.py
 #
 # Requisitos:
 #   - El listener debe estar arrancado: python run.py
@@ -22,10 +21,10 @@
 #   - output/metrics_summary.json     — resumen comparativo
 #   - Resumen por consola
 
-import argparse
 import json
 import os
 import statistics
+import subprocess
 import sys
 import time
 import uuid
@@ -35,21 +34,14 @@ import requests
 LISTENER_URL = os.getenv('LISTENER_URL', 'http://localhost:5000/webhook')
 OUTPUT_DIR = os.getenv('OUTPUT_DIR', './output')
 TRIALS_DIR = os.path.join(OUTPUT_DIR, 'trials')
-FIXTURES_FALLBACK = {
-    'vpn': 'tests/fixtures/webhook_vpn.json',
-    'resource': 'tests/fixtures/webhook_resource.json',
-}
+
+NUM_TRIALS = 5
 
 
 def load_trial_alert(alert_type, trial_num):
-    """Carga la alerta variada para un trial concreto. Si no existe, usa el fixture base."""
+    """Carga la alerta variada para un trial concreto."""
     trial_path = os.path.join(TRIALS_DIR, f'{alert_type}_{trial_num:02d}.json')
-    if os.path.exists(trial_path):
-        with open(trial_path, encoding='utf-8') as f:
-            return json.load(f)
-    # Fallback al fixture base si no hay alertas generadas
-    path = FIXTURES_FALLBACK[alert_type]
-    with open(path, encoding='utf-8') as f:
+    with open(trial_path, encoding='utf-8') as f:
         return json.load(f)
 
 
@@ -143,15 +135,15 @@ def calculate_stats(results):
     return stats
 
 
-def run_trials(alert_type, n_trials):
-    """Ejecuta N trials para un tipo de alerta y devuelve resultados + estadísticas."""
+def run_trials(alert_type):
+    """Ejecuta los 5 trials para un tipo de alerta y devuelve resultados + estadísticas."""
     print(f'\n{"="*60}')
-    print(f'  Ejecutando {n_trials} trials para: {alert_type.upper()}')
+    print(f'  Ejecutando {NUM_TRIALS} trials para: {alert_type.upper()}')
     print(f'{"="*60}')
 
     results = []
 
-    for i in range(1, n_trials + 1):
+    for i in range(1, NUM_TRIALS + 1):
         payload = load_trial_alert(alert_type, i)
         result = run_trial(payload, i)
         results.append(result)
@@ -159,10 +151,10 @@ def run_trials(alert_type, n_trials):
         status = 'OK' if result['success'] else 'FALLO'
         time_str = f"{result['response_time_ms']}ms" if result['response_time_ms'] else 'N/A'
         proc_str = f"(pipeline: {result['processing_time_ms']}ms)" if result.get('processing_time_ms') else ''
-        print(f'  Trial {i:2d}/{n_trials}: {status} — {time_str} {proc_str}')
+        print(f'  Trial {i:2d}/{NUM_TRIALS}: {status} - {time_str} {proc_str}')
 
         # Pausa entre trials para evitar rate limiting
-        if i < n_trials:
+        if i < NUM_TRIALS:
             time.sleep(0.5)
 
     stats = calculate_stats(results)
@@ -183,7 +175,7 @@ def print_summary(vpn_data, resource_data):
         if 'response_time' in stats:
             rt = stats['response_time']
             print(f'    Tiempo respuesta (mediana): {rt["mediana_ms"]}ms')
-            print(f'    Tiempo respuesta (rango):   {rt["min_ms"]}ms – {rt["max_ms"]}ms')
+            print(f'    Tiempo respuesta (rango):   {rt["min_ms"]}ms - {rt["max_ms"]}ms')
         if 'processing_time' in stats:
             pt = stats['processing_time']
             print(f'    Tiempo pipeline (mediana):   {pt["mediana_ms"]}ms')
@@ -194,15 +186,6 @@ def print_summary(vpn_data, resource_data):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Medición automatizada del tiempo de triaje SOAR'
-    )
-    parser.add_argument(
-        '--trials', type=int, default=10,
-        help='Número de trials por tipo de alerta (por defecto: 10)'
-    )
-    args = parser.parse_args()
-
     # Verificar que el listener está arrancado
     try:
         resp = requests.get('http://localhost:5000/health', timeout=5)
@@ -219,16 +202,12 @@ def main():
     first_vpn = os.path.join(TRIALS_DIR, 'vpn_01.json')
     if not os.path.exists(first_vpn):
         print('[*] Generando alertas variadas para los trials...')
-        import subprocess
-        subprocess.run(
-            [sys.executable, 'generate_trial_alerts.py', '--trials', str(args.trials)],
-            check=True
-        )
+        subprocess.run([sys.executable, 'generate_trial_alerts.py'], check=True)
         print()
 
     # Ejecutar trials
-    vpn_data = run_trials('vpn', args.trials)
-    resource_data = run_trials('resource', args.trials)
+    vpn_data = run_trials('vpn')
+    resource_data = run_trials('resource')
 
     # Guardar resultados detallados
     for data, name in [(vpn_data, 'vpn'), (resource_data, 'resource')]:
@@ -239,7 +218,7 @@ def main():
     # Guardar resumen comparativo
     summary = {
         'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S'),
-        'trials_per_type': args.trials,
+        'trials_per_type': NUM_TRIALS,
         'vpn': vpn_data['statistics'],
         'resource': resource_data['statistics'],
     }
