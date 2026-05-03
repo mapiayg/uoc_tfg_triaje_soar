@@ -110,23 +110,49 @@ class VPNDiagnostic:
         }
 
     def _analyze(self, tunnel_name: str, raw_data: dict) -> str:
-        """Genera resumen textual legible a partir de los datos crudos."""
+        """
+        Genera un diagnóstico interpretado: contrasta el túnel declarado en
+        la alerta con la lista real de túneles activos del firewall y emite
+        un veredicto operativo (caída confirmada o falso positivo) junto con
+        información de contexto sobre las interfaces del firewall.
+        """
         tunnels = (raw_data.get("ipsec_tunnels") or {}).get("results", [])
         affected = next(
             (t for t in tunnels if t.get("name") == tunnel_name), None
         )
 
+        # Contexto: estado de las interfaces (relevante para descartar problemas locales)
+        interfaces = (raw_data.get("interfaces") or {}).get("results", [])
+        # La API de FortiOS devuelve results como dict {nombre: {...}} o lista de dicts
+        if isinstance(interfaces, dict):
+            iface_items = [{"name": k, **v} for k, v in interfaces.items() if isinstance(v, dict)]
+        elif isinstance(interfaces, list):
+            iface_items = [i for i in interfaces if isinstance(i, dict)]
+        else:
+            iface_items = []
+        ifaces_up = [
+            i.get("name") for i in iface_items
+            if i.get("link") in (True, "up")
+        ]
+        iface_ctx = (
+            f"Interfaces del firewall operativas: {', '.join(ifaces_up)}."
+            if ifaces_up
+            else "Sin información de estado de las interfaces del firewall."
+        )
+
         if affected:
-            tun_id = affected.get("tun_id", "unknown")
             proxyid = affected.get("proxyid", [])
             return (
-                f"Túnel {tunnel_name} encontrado en lista IPSec. "
-                f"tun_id: {tun_id}. Proxyid activos: {len(proxyid)}. "
-                f"Causa probable: fallo en negociación IKE o pérdida de conectividad con peer remoto."
+                f"Probable FALSO POSITIVO o restablecimiento del túnel: "
+                f"{tunnel_name} aparece en la lista de túneles IPSec activos del firewall "
+                f"con {len(proxyid)} selectores activos. "
+                f"La alerta de caída no se confirma con el estado actual del firewall. "
+                f"{iface_ctx}"
             )
 
         return (
-            f"Túnel {tunnel_name} NO encontrado en lista de túneles activos. "
-            f"El túnel ha caído completamente. "
-            f"Verificar conectividad con peer remoto."
+            f"Caída de {tunnel_name} CONFIRMADA: el túnel no aparece en la lista "
+            f"de túneles IPSec activos del firewall y no hay gateways IKE para él. "
+            f"{iface_ctx} "
+            f"Causa probable: fallo en el peer remoto o en la negociación IKE."
         )

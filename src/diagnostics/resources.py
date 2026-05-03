@@ -95,10 +95,16 @@ class ResourceDiagnostic:
         }
 
     def _analyze(self, resource_type: str, threshold: float, raw_data: dict) -> str:
-        """Genera resumen textual legible a partir de los datos crudos."""
-        parts = []
+        """
+        Genera un diagnóstico interpretado: compara el umbral declarado en la
+        alerta con el valor real observado y emite un veredicto operativo
+        (alerta confirmada, falso positivo o pico transitorio).
+        """
+        # Extraer valor real del recurso afectado
+        observed = None
+        cpu_current = None
+        mem_current = None
 
-        # Datos de consumo de recursos
         usage = raw_data.get("resource_usage")
         if usage and "results" in usage:
             results = usage["results"]
@@ -106,24 +112,54 @@ class ResourceDiagnostic:
                 cpu_data = results.get("cpu")
                 mem_data = results.get("mem")
                 if cpu_data and isinstance(cpu_data, list) and len(cpu_data) > 0:
-                    parts.append(f"CPU actual: {cpu_data[0].get('current', '?')}%")
+                    cpu_current = cpu_data[0].get("current")
                 if mem_data and isinstance(mem_data, list) and len(mem_data) > 0:
-                    parts.append(f"Memoria actual: {mem_data[0].get('current', '?')}%")
+                    mem_current = mem_data[0].get("current")
 
-        # Sesiones activas
-        sessions = raw_data.get("session_count")
-        if sessions and "results" in sessions:
-            count = sessions["results"]
+        if resource_type == "cpu":
+            observed = cpu_current
+        elif resource_type == "mem":
+            observed = mem_current
+
+        # Datos auxiliares para el contexto
+        sessions = None
+        sess_data = raw_data.get("session_count")
+        if sess_data and "results" in sess_data:
+            count = sess_data["results"]
             if isinstance(count, dict):
-                parts.append(f"Sesiones activas: {count.get('count', '?')}")
-            elif isinstance(count, list):
-                parts.append(f"Sesiones: {len(count)} entradas")
+                sessions = count.get("count")
 
-        if not parts:
-            parts.append("No se pudieron obtener datos de consumo de la API")
+        # Veredicto: comparar valor real con umbral declarado
+        if observed is None:
+            verdict = (
+                f"No se pudo obtener el valor real de {resource_type.upper()} del firewall "
+                f"(consultar campo 'errors' del ticket). Alerta original: {threshold}%."
+            )
+        elif observed >= threshold:
+            verdict = (
+                f"Alerta CONFIRMADA: el firewall reporta {resource_type.upper()} "
+                f"al {observed}%, igual o por encima del umbral declarado en la alerta ({threshold}%)."
+            )
+        elif observed >= threshold * 0.7:
+            verdict = (
+                f"Alerta DEGRADADA pero no en umbral crítico: {resource_type.upper()} "
+                f"al {observed}% (umbral declarado {threshold}%). Posible pico parcialmente resuelto."
+            )
+        else:
+            verdict = (
+                f"Probable FALSO POSITIVO o pico ya resuelto: {resource_type.upper()} "
+                f"al {observed}%, muy por debajo del umbral declarado en la alerta ({threshold}%)."
+            )
 
-        parts.append(
-            f"Alerta original: {resource_type} al {threshold}%."
-        )
+        # Contexto adicional
+        context = []
+        if cpu_current is not None and resource_type != "cpu":
+            context.append(f"CPU al {cpu_current}%")
+        if mem_current is not None and resource_type != "mem":
+            context.append(f"memoria al {mem_current}%")
+        if sessions is not None:
+            context.append(f"{sessions} sesiones activas")
 
-        return " | ".join(parts)
+        if context:
+            return f"{verdict} Contexto del firewall: {', '.join(context)}."
+        return verdict

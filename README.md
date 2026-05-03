@@ -166,10 +166,30 @@ uoc_tfg_triaje_soar/
 
 ---
 
-## Arquitectura del sistema
+## Modelo de despliegue
+
+La solución se concibe como una **herramienta interna del N1** que opera en paralelo al flujo corporativo, sin modificar WOCU ni ServiceNow:
 
 ```
-WOCU (alerta)
+   FLUJO CORPORATIVO (sin tocar)
+   WOCU --> ServiceNow --> Ticket asignado al N1 --> N1 cierra el ticket
+                                  |                          ^
+                                  | datos de la alerta       |
+                                  v                          |
+                          +----------------+    ticket       |
+                          | Solución SOAR  |  enriquecido    |
+                          | (herramienta N1)|----------------+
+                          +----------------+    interno
+                          | acceso firewall|
+                          | diagnóstico    |
+                          | veredicto op.  |
+                          +----------------+
+```
+
+## Arquitectura interna (pipeline)
+
+```
+datos del ticket asignado
     |
     v HTTP POST /webhook
 +-----------------------+
@@ -193,8 +213,9 @@ WOCU (alerta)
    VPN Diag  Resource Diag  <- src/diagnostics/vpn.py
                              <- src/diagnostics/resources.py
        |      |
-       +------+
-            |
+       +------+--> API REST del firewall del cliente
+            |      (consultas + comparación con el umbral
+            |       declarado, veredicto operativo)
             v
 +-----------------------+
 |  Clasificador         |  <- src/severity.py
@@ -208,7 +229,7 @@ WOCU (alerta)
 +-----------+-----------+
             |
             v
-    Ticket INC-*.json
-    + INC-*.txt
+    Ticket enriquecido interno
+    output/INC-*.json + INC-*.txt
     + logs/soar.log
 ```
